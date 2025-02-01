@@ -11,7 +11,7 @@ import SwiftUI
 struct otus_hw1App: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainScreen()
         }
     }
 }
