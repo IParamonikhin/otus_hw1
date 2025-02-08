@@ -8,7 +8,7 @@
 import SwiftUI
 
 enum Tabs: Hashable {
-    case main, carList
+    case main, carList, modal
 }
 
 struct MainScreen: View {
@@ -29,6 +29,12 @@ struct MainScreen: View {
                     .tag(Tabs.carList)
                     .tabItem {
                         Label("Car List", systemImage: "car")
+                    }
+
+                ModalTabView()
+                    .tag(Tabs.modal)
+                    .tabItem {
+                        Label("Modal Car Screen", systemImage: "plus.app")
                     }
             }
             .background(Color.gray)
@@ -81,6 +87,67 @@ struct MainTabView: View {
                     }
                 }
                 .padding(16)
+            }
+        }
+    }
+}
+
+struct ModalTabView: View {
+    @State private var selectedCar: String? = nil
+    @State private var showModal: Bool = false
+    @EnvironmentObject var viewModel: CarListViewModel
+    
+    var body: some View {
+        ZStack {
+            Color.gray
+                .edgesIgnoringSafeArea(.all)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(viewModel.cars) { car in
+                        VStack {
+                            Button(action: {
+                                selectedCar = car.name // Сначала обновляем selectedCar
+                                showModal = true // Затем показываем модальное окно
+                                print("Selected car: \(car.name)")
+                            }) {
+                                Image(car.name)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: UIScreen.main.bounds.width * 0.8, height: UIScreen.main.bounds.height * 0.4)  // Пропорциональный размер изображения
+                                    .clipped()
+                                    .cornerRadius(10)
+                                    .shadow(color: .black, radius: 10)
+                            }
+                            .onAppear {
+                                if let selectedCar = selectedCar {
+                                    print("Selected car is \(selectedCar)")
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Text(car.name)
+                                .font(.system(size: 30))
+                                .frame(maxWidth: .infinity)  // Ограничиваем ширину текста
+                        }
+                        .frame(width: UIScreen.main.bounds.width * 0.8)  // Пропорциональная ширина всей карточки
+                    }
+                }
+                .padding(16)
+            }
+        }
+        .sheet(isPresented: $showModal) { // Показываем модальное окно
+            if let selectedCar = selectedCar { // Проверяем, что selectedCar не nil
+                CarScreen(name: selectedCar)
+                    .navigationBarBackButtonHidden(true)
+                    .onAppear {
+                        print("Opening modal for car: \(selectedCar)")
+                    }
+            } else {
+                Text("No car selected")
+                    .onAppear {
+                        print("No car selected to display in modal.")
+                    }
             }
         }
     }

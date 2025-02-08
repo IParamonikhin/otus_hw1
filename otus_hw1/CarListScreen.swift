@@ -72,19 +72,17 @@ struct CarScreen: View {
     let name: String
 
     var body: some View {
-        ZStack{
-            Color.gray
-                .edgesIgnoringSafeArea(.all)
-            HStack {
+            ZStack {
+                Color.gray
+                    .edgesIgnoringSafeArea(.all)
+                
                 Image(name)
                     .resizable()
                     .scaledToFit()
             }
-            .background(Color.gray)
-            .navigationTitle(name)
+            .navigationTitle(name)  // Устанавливаем заголовок
             .onAppear {
                 print("Машина выбрана: \(name)")
             }
-        }
     }
 }
