@@ -11,6 +11,39 @@ enum Tabs: Hashable {
     case main, carList, modal
 }
 
+struct CarModel: Identifiable {
+    let name: String
+    var id: String { name }
+}
+
+final class CarListViewModel: ObservableObject {
+    
+    @Published var cars: [CarModel] = [
+        CarModel(name: "Audi"),
+        CarModel(name: "BMW"),
+        CarModel(name: "Dodge"),
+        CarModel(name: "Ford"),
+        CarModel(name: "Lamborghini"),
+        CarModel(name: "Mercedes")
+    ]
+}
+
+struct UILabelWrapper: UIViewRepresentable {
+    let text: String
+
+    func makeUIView(context: Context) -> UILabel {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 25)
+        label.textColor = .black
+        label.textAlignment = .left
+        return label
+    }
+
+    func updateUIView(_ uiView: UILabel, context: Context) {
+        uiView.text = text
+    }
+}
+
 struct MainScreen: View {
     @State private var selectionTab: Tabs = .main
     @State private var selectedCar: String? = nil
@@ -40,7 +73,7 @@ struct MainScreen: View {
             .background(Color.gray)
             .environmentObject(viewModel)
             .onChange(of: selectedCar) { newCar in
-                if selectedCar != nil {
+                if newCar != nil {
                     selectionTab = .carList
                 }
             }
@@ -72,7 +105,7 @@ struct MainTabView: View {
                                 Image(car.name)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: UIScreen.main.bounds.width * 0.8, height: UIScreen.main.bounds.height * 0.4)  // Пропорциональный размер изображения
+                                    .frame(width: UIScreen.main.bounds.width * 0.8, height: UIScreen.main.bounds.height * 0.4)
                                     .clipped()
                                     .cornerRadius(10)
                                     .shadow(color: .black, radius: 10)
@@ -81,9 +114,9 @@ struct MainTabView: View {
 
                             Text(car.name)
                                 .font(.system(size: 30))
-                                .frame(maxWidth: .infinity)  // Ограничиваем ширину текста
+                                .frame(maxWidth: .infinity)
                         }
-                        .frame(width: UIScreen.main.bounds.width * 0.8)  // Пропорциональная ширина всей карточки
+                        .frame(width: UIScreen.main.bounds.width * 0.8)
                     }
                 }
                 .padding(16)
@@ -92,64 +125,113 @@ struct MainTabView: View {
     }
 }
 
-struct ModalTabView: View {
-    @State private var selectedCar: String? = nil
-    @State private var showModal: Bool = false
+
+struct CarListScreen: View {
     @EnvironmentObject var viewModel: CarListViewModel
-    
+    @Binding var selectedCar: String?
+
     var body: some View {
         ZStack {
             Color.gray
                 .edgesIgnoringSafeArea(.all)
-            
+
+            List {
+                ForEach(viewModel.cars) { car in
+                    NavigationLink(
+                        destination: CarScreen(name: car.name),
+                        tag: car.name,
+                        selection: $selectedCar
+                    ) {
+                        HStack {
+                            Image(car.name)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 50)
+                                .cornerRadius(5)
+                            
+                            UILabelWrapper(text: car.name)
+                                .frame(height: 30)
+                        }
+                        .frame(height: 70)
+                    }
+                    .listRowBackground(Color.gray)
+                }
+                .padding(.bottom, 10)
+            }
+            .listStyle(PlainListStyle())
+            .padding(.bottom, 10)
+        }
+        .navigationTitle("Список машин")
+        .padding(.bottom, 10)
+    }
+}
+
+struct ModalTabView: View {
+    @State private var modalSelectedCar: String? = nil
+    @State private var isShowModal: Bool = false
+    @EnvironmentObject var viewModel: CarListViewModel
+
+    var body: some View {
+        ZStack {
+            Color.gray
+                .edgesIgnoringSafeArea(.all)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(viewModel.cars) { car in
                         VStack {
-                            Button(action: {
-                                selectedCar = car.name // Сначала обновляем selectedCar
-                                showModal = true // Затем показываем модальное окно
-                                print("Selected car: \(car.name)")
-                            }) {
+                            Button(action: { modalSelectedCar = car.name }) {
                                 Image(car.name)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: UIScreen.main.bounds.width * 0.8, height: UIScreen.main.bounds.height * 0.4)  // Пропорциональный размер изображения
+                                    .frame(width: UIScreen.main.bounds.width * 0.8, height: UIScreen.main.bounds.height * 0.4)
                                     .clipped()
                                     .cornerRadius(10)
                                     .shadow(color: .black, radius: 10)
                             }
-                            .onAppear {
-                                if let selectedCar = selectedCar {
-                                    print("Selected car is \(selectedCar)")
-                                }
-                            }
                             .buttonStyle(PlainButtonStyle())
-                            
                             Text(car.name)
                                 .font(.system(size: 30))
-                                .frame(maxWidth: .infinity)  // Ограничиваем ширину текста
+                                .frame(maxWidth: .infinity)
                         }
-                        .frame(width: UIScreen.main.bounds.width * 0.8)  // Пропорциональная ширина всей карточки
+                        .frame(width: UIScreen.main.bounds.width * 0.8)
                     }
                 }
                 .padding(16)
             }
         }
-        .sheet(isPresented: $showModal) { // Показываем модальное окно
-            if let selectedCar = selectedCar { // Проверяем, что selectedCar не nil
-                CarScreen(name: selectedCar)
+        .onChange(of: modalSelectedCar) { newCar in
+            isShowModal = newCar != nil
+        }
+        .sheet(isPresented: $isShowModal, onDismiss: { modalSelectedCar = nil }) {
+            if let carName = modalSelectedCar {
+                CarScreen(name: carName)
                     .navigationBarBackButtonHidden(true)
-                    .onAppear {
-                        print("Opening modal for car: \(selectedCar)")
-                    }
             } else {
-                Text("No car selected")
-                    .onAppear {
-                        print("No car selected to display in modal.")
-                    }
+                Text("Ошибка: машина не выбрана")
+                    .font(.title)
+                    .foregroundColor(.red)
             }
         }
+    }
+}
+
+struct CarScreen: View {
+    let name: String
+
+    var body: some View {
+            ZStack {
+                Color.gray
+                    .edgesIgnoringSafeArea(.all)
+                
+                Image(name)
+                    .resizable()
+                    .scaledToFit()
+            }
+            .navigationTitle(name)
+            .onAppear {
+                print("Машина выбрана: \(name)")
+            }
     }
 }
 
